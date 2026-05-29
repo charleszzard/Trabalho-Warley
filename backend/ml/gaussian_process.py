@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.stats import norm
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C, WhiteKernel
 
@@ -58,15 +59,50 @@ class StickerPredictor:
     def get_completion_probability(self, packs_opened):
         if len(self.X_train) < 2:
             return 0.0
-            
+
         # We predict the number of unique stickers at the current packs opened
         y_pred, sigma = self.gp.predict([[packs_opened]], return_std=True)
-        
+
         if sigma[0] == 0:
             return 1.0 if y_pred[0] >= self.total_stickers else 0.0
-            
+
         # Probability that unique stickers >= total_stickers
         # P(Y >= total_stickers) = 1 - CDF(total_stickers)
-        from scipy.stats import norm
         prob = 1.0 - norm.cdf(self.total_stickers, loc=y_pred[0], scale=sigma[0])
         return max(0.0, min(1.0, float(prob)))
+
+    def get_predictive_distribution(self, packs_opened, num_points=120):
+        # The GP's marginal prediction at a single x is a Normal(mean, sigma^2).
+        # Sampling that PDF gives the literal "Gaussian bell curve" for the current
+        # number of opened packs. The tail mass beyond total_stickers is exactly the
+        # completion probability, so the curve visually explains get_completion_probability.
+        if len(self.X_train) < 2:
+            return {
+                "x": [], "pdf": [], "mean": 0.0, "sigma": 0.0,
+                "target": self.total_stickers, "prob_completion": 0.0,
+            }
+
+        mean_arr, sigma_arr = self.gp.predict([[packs_opened]], return_std=True)
+        mean = float(np.clip(mean_arr[0], 0, self.total_stickers))
+        sigma = float(max(sigma_arr[0], 1e-6))
+
+        # Zoom the x-window to the bell itself (mean +- 4 sigma) so the curve always
+        # reads as a Gaussian. A floor keeps it visible when the GP is very confident
+        # (tiny sigma). The target line / completion area only show once the right tail
+        # reaches the album size, which happens as you approach completion.
+        half_width = max(4 * sigma, 3.0)
+        lo = max(0.0, mean - half_width)
+        hi = min(self.total_stickers * 1.05, mean + half_width)
+        xs = np.linspace(lo, hi, num_points)
+        pdf = norm.pdf(xs, loc=mean, scale=sigma)
+
+        prob = 1.0 - norm.cdf(self.total_stickers, loc=mean, scale=sigma)
+
+        return {
+            "x": xs.tolist(),
+            "pdf": pdf.tolist(),
+            "mean": mean,
+            "sigma": sigma,
+            "target": self.total_stickers,
+            "prob_completion": max(0.0, min(1.0, float(prob))),
+        }

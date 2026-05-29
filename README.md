@@ -35,10 +35,10 @@ venv\Scripts\activate
 # source venv/bin/activate
 
 # Instale as dependências (caso ainda não tenha feito)
-pip install fastapi uvicorn pydantic opencv-python scikit-learn
+pip install fastapi uvicorn pydantic opencv-python scikit-learn scipy numpy
 
-# Inicie o servidor
-uvicorn main:app --reload
+# Inicie o servidor (use python -m para evitar problemas de PATH no Windows)
+python -m uvicorn main:app --reload
 ```
 *O servidor backend rodará por padrão na porta `8000` (http://localhost:8000).*
 
@@ -63,11 +63,14 @@ npm run dev
 ## 🎮 Como usar a aplicação
 
 1. **Abra a aplicação no navegador** através da URL fornecida pelo Vite.
-2. **Dashboard de Estatísticas:** Na tela principal, você verá o progresso do seu álbum (Figurinhas Únicas, Repetidas, e Probabilidade de Completar).
-3. **Scanner de Webcam:** Permita o acesso à sua câmera e mostre figurinhas reais para a webcam. O sistema utilizará visão computacional para detectá-las automaticamente.
+2. **Navegação:** No topo há duas abas — **Scanner** (tela interativa) e **Dashboard** (tela de análise estatística).
+3. **Scanner de Webcam:** Na aba Scanner, permita o acesso à sua câmera e mostre figurinhas reais para a webcam. O sistema utilizará visão computacional para detectá-las automaticamente.
 4. **Abrir Pacotinhos:** Clique no botão de abrir pacotes para simular a abertura de novos pacotes. A interface exibirá animações modernas (com sons) revelando figurinhas comuns, épicas ou lendárias.
-5. **Gráfico Gaussiano:** Role a página para baixo para visualizar o gráfico gerado pelo Machine Learning (Processo Gaussiano), mostrando a curva de estimativa e variância para completar o álbum conforme novos pacotes são abertos.
-6. Você pode usar o botão "Reset" no painel para zerar o progresso e começar novamente.
+5. **Dashboard de Análise:** Abra a aba **Dashboard** para visualizar:
+   - **Curva Gaussiana (curva de sino):** a distribuição normal preditiva do GP no número atual de pacotes abertos. A área verde à direita da linha do álbum (682) é exatamente a probabilidade de completar.
+   - **Curva de Saturação:** a regressão por Processo Gaussiano (figurinhas únicas × pacotes) com intervalo de confiança de 95%.
+   - **Correlações Estatísticas:** médias de novas/repetidas por pacote, taxa de duplicação, correlação pacote × novas e o histórico de novas vs. repetidas por pacote.
+6. Você pode usar o botão "Resetar BD" no cabeçalho para zerar o progresso e começar novamente.
 
 ---
 

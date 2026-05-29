@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, FunctionSquare, Network } from 'lucide-react';
+import { BookOpen, FunctionSquare, Network, BellRing } from 'lucide-react';
 
 const AcademicExplanation: React.FC = () => {
   return (
@@ -9,7 +9,7 @@ const AcademicExplanation: React.FC = () => {
         <h3 className="text-lg font-semibold">Fundamentação Matemática</h3>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-300">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-gray-300">
         <div>
           <h4 className="flex items-center gap-2 text-white mb-2 font-medium">
             <FunctionSquare className="w-4 h-4 text-neonBlue" />
@@ -36,6 +36,19 @@ const AcademicExplanation: React.FC = () => {
           </div>
           <p>
             O preenchimento do álbum segue o <em>Problema do Colecionador de Cupons</em>, onde a probabilidade de encontrar uma nova figurinha diminui exponencialmente à medida que o álbum enche, exigindo assintoticamente mais pacotes para encontrar as últimas figurinhas faltantes.
+          </p>
+        </div>
+
+        <div>
+          <h4 className="flex items-center gap-2 text-white mb-2 font-medium">
+            <BellRing className="w-4 h-4 text-neonBlue" />
+            Distribuição Preditiva (Curva de Sino)
+          </h4>
+          <p className="mb-2">
+            Em qualquer número fixo de pacotes, a previsão marginal do GP é uma <strong>Normal(μ, σ²)</strong>. Plotar essa densidade gera a clássica <em>curva de sino</em> — visível no Dashboard — centrada na quantidade esperada de figurinhas únicas.
+          </p>
+          <p>
+            A massa da cauda à direita da linha do álbum (682) é exatamente a <strong>probabilidade de completar</strong>: P(Y ≥ 682) = 1 − Φ((682 − μ) / σ). Assim, a área verde no gráfico traduz visualmente a métrica de conclusão.
           </p>
         </div>
       </div>

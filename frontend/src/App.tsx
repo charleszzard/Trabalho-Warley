@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Activity, BrainCircuit, ScanLine } from 'lucide-react';
-import WebcamScanner from './components/WebcamScanner';
-import PackOpener from './components/PackOpener';
-import GaussianChart from './components/GaussianChart';
-import Dashboard from './components/Dashboard';
-import AcademicExplanation from './components/AcademicExplanation';
+import { useState, useEffect } from 'react';
+import { Routes, Route, NavLink } from 'react-router-dom';
+import { Activity, BrainCircuit, LayoutDashboard, ScanLine } from 'lucide-react';
+import HomePage from './pages/HomePage';
+import DashboardPage from './pages/DashboardPage';
 import type { AppState } from './types';
 
 const API_URL = 'http://localhost:8000';
@@ -53,22 +51,41 @@ function App() {
     }
   };
 
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
+      isActive
+        ? 'bg-neonBlue/15 text-neonBlue border-neonBlue/40'
+        : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10'
+    }`;
+
   return (
     <div className="min-h-screen p-4 md:p-8">
       {/* Header */}
-      <header className="flex items-center justify-between mb-8 glass-panel p-4">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 glass-panel p-4">
         <div className="flex items-center gap-3">
           <BrainCircuit className="w-8 h-8 text-neonBlue" />
           <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neonBlue to-neonPurple">
             Gaussian Sticker Predictor
           </h1>
         </div>
+
+        <nav className="flex items-center gap-2">
+          <NavLink to="/" end className={navLinkClass}>
+            <ScanLine className="w-4 h-4" />
+            Scanner
+          </NavLink>
+          <NavLink to="/dashboard" className={navLinkClass}>
+            <LayoutDashboard className="w-4 h-4" />
+            Dashboard
+          </NavLink>
+        </nav>
+
         <div className="flex gap-4 items-center">
           <div className="flex items-center gap-2 text-sm text-gray-400">
             <Activity className="w-4 h-4 text-green-400 animate-pulse" />
             Sistema Online
           </div>
-          <button 
+          <button
             onClick={handleReset}
             className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm transition-all"
           >
@@ -77,39 +94,21 @@ function App() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Vision & Stats */}
-        <div className="lg:col-span-4 space-y-6">
-          <WebcamScanner onDetect={setDetectedIds} wsUrl={`ws://localhost:8000/ws`} />
-          <Dashboard stats={stats} />
-        </div>
-
-        {/* Center/Right Column: Pack & Chart */}
-        <div className="lg:col-span-8 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div className="glass-panel p-6 flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden">
-                <div className="absolute top-4 left-4 flex items-center gap-2 text-neonBlue text-sm font-mono">
-                  <ScanLine className="w-4 h-4" />
-                  <span>SIMULADOR_PACOTES</span>
-                </div>
-                <PackOpener 
-                  detectedIds={detectedIds} 
-                  onOpen={handleOpenPack}
-                  isOpening={isOpeningPack} 
-                />
-             </div>
-             
-             <div className="glass-panel p-6 flex flex-col">
-                <h3 className="text-lg font-semibold mb-4 text-gray-200">Inferência de GP em Tempo Real</h3>
-                <div className="flex-1 w-full min-h-[250px]">
-                  {stats ? <GaussianChart stats={stats} /> : <div className="animate-pulse flex items-center justify-center h-full text-gray-500">Carregando Modelo...</div>}
-                </div>
-             </div>
-          </div>
-          
-          <AcademicExplanation />
-        </div>
-      </div>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <HomePage
+              stats={stats}
+              detectedIds={detectedIds}
+              onDetect={setDetectedIds}
+              onOpenPack={handleOpenPack}
+              isOpeningPack={isOpeningPack}
+            />
+          }
+        />
+        <Route path="/dashboard" element={<DashboardPage stats={stats} />} />
+      </Routes>
     </div>
   );
 }

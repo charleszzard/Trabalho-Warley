@@ -6,7 +6,15 @@ interface DashboardProps {
   stats: AppState | null;
 }
 
-const StatCard = ({ title, value, icon: Icon, colorClass, suffix = '' }) => (
+interface StatCardProps {
+  title: string;
+  value: string | number | undefined;
+  icon: React.ElementType;
+  colorClass: string;
+  suffix?: string;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, colorClass, suffix = '' }) => (
   <div className="glass-panel p-4 flex items-center gap-4 relative overflow-hidden group">
     <div className={`absolute -right-4 -top-4 w-16 h-16 rounded-full opacity-10 group-hover:opacity-20 transition-opacity ${colorClass.replace('text-', 'bg-')}`} />
     <div className={`p-3 rounded-xl bg-white/5 border border-white/10 ${colorClass}`}>

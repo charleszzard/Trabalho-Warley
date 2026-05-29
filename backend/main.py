@@ -1,10 +1,10 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Set
-import json
+from typing import List, Set, Dict
 import base64
 import asyncio
+import numpy as np
 
 from ml.gaussian_process import StickerPredictor
 from cv.detector import StickerDetector
@@ -28,21 +28,58 @@ collected_stickers: Set[int] = set()
 total_stickers_found = 0
 packs_opened = 0
 
+# Per-pack history: one entry per opened pack, used for the distribution / correlations
+pack_history: List[Dict] = []
+
 predictor = StickerPredictor(total_stickers=TOTAL_STICKERS, stickers_per_pack=STICKERS_PER_PACK)
 detector = StickerDetector()
 
 class PackData(BaseModel):
     stickers: List[int]
 
+
+def compute_correlations():
+    """Statistical associations between packs opened and stickers obtained."""
+    if not pack_history:
+        return {
+            "avg_new_per_pack": 0.0,
+            "avg_repeated_per_pack": 0.0,
+            "duplication_rate": 0.0,
+            "corr_pack_vs_new": 0.0,
+        }
+
+    news = np.array([p["new"] for p in pack_history], dtype=float)
+    repeats = np.array([p["repeated"] for p in pack_history], dtype=float)
+    idx = np.arange(1, len(pack_history) + 1, dtype=float)
+
+    duplication_rate = (
+        (total_stickers_found - len(collected_stickers)) / total_stickers_found
+        if total_stickers_found > 0 else 0.0
+    )
+
+    # Correlation between pack order and new stickers found: expected to be negative,
+    # since each new pack is less likely to contain unseen stickers (coupon collector).
+    if len(idx) > 1 and news.std() > 0:
+        corr_pack_vs_new = float(np.corrcoef(idx, news)[0, 1])
+    else:
+        corr_pack_vs_new = 0.0
+
+    return {
+        "avg_new_per_pack": float(news.mean()),
+        "avg_repeated_per_pack": float(repeats.mean()),
+        "duplication_rate": float(duplication_rate),
+        "corr_pack_vs_new": corr_pack_vs_new,
+    }
+
 @app.get("/stats")
 async def get_stats():
     unique_count = len(collected_stickers)
     repeated_count = total_stickers_found - unique_count
-    
+
     # Get GP predictions
     x_pred, y_pred, sigma = predictor.predict(max_packs=packs_opened + 200)
     prob_completion = predictor.get_completion_probability(packs_opened)
-    
+
     return {
         "packs_opened": packs_opened,
         "total_stickers_found": total_stickers_found,
@@ -54,29 +91,47 @@ async def get_stats():
             "x": x_pred,
             "y": y_pred,
             "sigma": sigma
-        }
+        },
+        # Marginal Gaussian (bell curve) of the GP at the current number of packs
+        "predictive_distribution": predictor.get_predictive_distribution(packs_opened),
+        # Per-pack new/repeated breakdown for trend visualizations
+        "pack_history": pack_history,
+        # Statistical associations between packs and stickers
+        "correlations": compute_correlations(),
     }
 
 @app.post("/open_pack")
 async def open_pack(data: PackData):
     global packs_opened, total_stickers_found
-    
+
     packs_opened += 1
     total_stickers_found += len(data.stickers)
-    
+
+    new_in_pack = 0
     for sid in data.stickers:
+        if sid not in collected_stickers:
+            new_in_pack += 1
         collected_stickers.add(sid)
-        
+
+    pack_history.append({
+        "pack": packs_opened,
+        "new": new_in_pack,
+        "repeated": len(data.stickers) - new_in_pack,
+        "unique_total": len(collected_stickers),
+        "found_total": total_stickers_found,
+    })
+
     predictor.add_data(packs_opened, len(collected_stickers))
-    
+
     return await get_stats()
 
 @app.post("/reset")
 async def reset():
-    global collected_stickers, packs_opened, total_stickers_found, predictor
+    global collected_stickers, packs_opened, total_stickers_found, predictor, pack_history
     collected_stickers = set()
     packs_opened = 0
     total_stickers_found = 0
+    pack_history = []
     predictor = StickerPredictor(total_stickers=TOTAL_STICKERS, stickers_per_pack=STICKERS_PER_PACK)
     return {"status": "reset"}
 
