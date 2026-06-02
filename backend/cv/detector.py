@@ -8,6 +8,8 @@ class StickerDetector:
         self.active_stickers = {}
         
     def process_frame(self, frame_bytes):
+        if not frame_bytes:
+            return None, []
         # Convert bytes to numpy array
         np_arr = np.frombuffer(frame_bytes, np.uint8)
         frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
